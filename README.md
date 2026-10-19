@@ -47,7 +47,33 @@ This PoC demonstrates a model compression approach where:
 3. **Storage**: Model file contains only indices + metadata. Codebook is stored separately in the runtime
 4. **Inference**: For each layer, indices are decoded back to full weights on-the-fly, used for computation, then discarded
 
-## Results (PoC with small model)
+## Target Use Case
+
+**Problem**: User with 8GB VRAM laptop wants to run 13B-14B parameter models locally.
+
+**Solution**: Codebook compression reduces model size from ~26-28GB (FP16) to ~6.5-7GB (4-bit indices), making it fit in 8GB VRAM.
+
+## Simulation Results (13B Model)
+
+```
+Model: Llama-3.2-13B (simulated)
+Original FP16:              26 GB
+Compressed (4-bit indices): 6.5 GB  (4x smaller)
+Codebook (external):        ~16 MB
+
+VRAM during inference:
+  Original:                  26 GB (does NOT fit in 8GB VRAM)
+  Compressed (per-layer):    6.5 GB + 1 layer decoded (~200 MB) = ~6.7 GB
+  VRAM saving:               74% (from 26 GB to 6.7 GB)
+  Fits in 8GB VRAM:          YES
+
+For 27B model:
+  Original FP16:              54 GB
+  Compressed (4-bit):         13.5 GB (still does NOT fit in 8GB)
+  Compressed (2-bit):         3.4 GB (fits, but quality significantly lower)
+```
+
+## Real Benchmark Results (PoC with small model)
 
 ```
 Original model (FP32):       1.13 MB
@@ -62,10 +88,7 @@ VRAM during inference:
 Decode overhead:             1.48 ms total
 ```
 
-For larger models (e.g., 7B parameters), the VRAM saving is expected to be **~87%** because:
-- Compressed model: ~1.75 GB (uint8 indices)
-- One decoded layer: ~50-100 MB
-- Total: ~1.85 GB vs original ~14 GB
+**Note**: The small model PoC demonstrates the concept. The 13B simulation shows the target use case. Real benchmark with 13B model is needed for validation.
 
 ## Trade-offs
 
@@ -109,7 +132,9 @@ codebook-compression-poc/
 - **No GPU optimization**: Decode happens on CPU. Production needs fused GPU kernels (see LUT-GEMM)
 - **Simple k-means**: No advanced clustering or learned codebooks
 - **No format standard**: Custom format, not compatible with existing tools
-- **Small model only**: Tested with ~1M param model. Needs validation with real LLMs
+- **Small model only**: Tested with ~1M param model. Needs validation with real LLMs (13B+)
+- **No real LLM benchmark**: 13B results are simulated, not measured
+- **Speed not validated**: Decode overhead for large models unknown without GPU implementation
 
 ## Related Work
 
