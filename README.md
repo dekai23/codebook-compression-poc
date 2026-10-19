@@ -53,25 +53,27 @@ This PoC demonstrates a model compression approach where:
 
 **Solution**: Codebook compression reduces model size from ~26-28GB (FP16) to ~6.5-7GB (4-bit indices), making it fit in 8GB VRAM.
 
-## Simulation Results (13B Model)
+## Simulation Results (Gemma 4 12B from Ollama)
 
 ```
-Model: Llama-3.2-13B (simulated)
-Original FP16:              26 GB
-Compressed (4-bit indices): 6.5 GB  (4x smaller)
-Codebook (external):        ~16 MB
+Model: gemma4:latest (12B) — 9.6 GB FP16 (from Ollama)
+Target: 8GB VRAM laptop
 
-VRAM during inference:
-  Original:                  26 GB (does NOT fit in 8GB VRAM)
-  Compressed (per-layer):    6.5 GB + 1 layer decoded (~200 MB) = ~6.7 GB
-  VRAM saving:               74% (from 26 GB to 6.7 GB)
-  Fits in 8GB VRAM:          YES
+Original FP16:              9.6 GB  (does NOT fit with KV cache overhead)
+Codebook 8-bit (uint8):     11.2 GB  (TIDAK MUAT)
+Codebook 4-bit (uint4):      5.6 GB  (MUAT — sweet spot)
+Codebook 2-bit (uint2):      2.8 GB  (MUAT — ekstrem, kualitas turun)
 
-For 27B model:
-  Original FP16:              54 GB
-  Compressed (4-bit):         13.5 GB (still does NOT fit in 8GB)
-  Compressed (2-bit):         3.4 GB (fits, but quality significantly lower)
+VRAM available for weights: 7.0 GB (8GB - 1GB overhead untuk KV cache)
+
+Perbandingan dengan existing:
+  GGUF Q4_K_M (12B):         ~7.6 GB (sudah muat, mature)
+  Codebook 4-bit (12B):      ~5.6 GB (lebih kecil, tapi perlu GPU kernel)
 ```
+
+Other Gemma 4 variants:
+- gemma4:e4b (4B): 3.0 GB → 1.9 GB (4-bit) → muat
+- gemma4:e2b (2B): 1.5 GB → 0.9 GB (4-bit) → muat
 
 ## Real Benchmark Results (PoC with small model)
 
